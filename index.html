@@ -1,0 +1,433 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>B2C-бот Интуриста: ветка туриста</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Unbounded:wght@500;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: рабочий стол сценария — телефон с живым ботом слева, спецификация шага и карточка Mindbox справа */
+:root{
+  --bg:#eef1f5; --panel:#ffffff; --ink:#18212e; --muted:#5d6b7e; --line:#d6dde7;
+  --accent:#1f5fae; --accent-soft:#e3edf9; --gold:#b8862b; --gold-soft:#f7eedb;
+  --ok:#23835a; --ok-soft:#dff1e8;
+  --chat-bg:#0f1a26; --bubble:#1e2c3b; --bubble-me:#2b5d8f; --kb:#223245; --kb-on:#2f6a4c; --chat-ink:#e8eef5; --chat-muted:#8ea0b4;
+  --f-display:"Unbounded","Golos Text",system-ui,sans-serif;
+  --f-body:"Golos Text",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e141c; --panel:#161f2b; --ink:#e4eaf2; --muted:#93a2b5; --line:#2a3646;
+  --accent:#6aa8f0; --accent-soft:#1b2c42; --gold:#e0b35a; --gold-soft:#33291a;
+  --ok:#5fcf98; --ok-soft:#173327; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e141c; --panel:#161f2b; --ink:#e4eaf2; --muted:#93a2b5; --line:#2a3646;
+  --accent:#6aa8f0; --accent-soft:#1b2c42; --gold:#e0b35a; --gold-soft:#33291a;
+  --ok:#5fcf98; --ok-soft:#173327; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;margin:0}
+.wrap{max-width:1320px;margin:0 auto;padding-inline:16px;padding-block:20px 48px}
+header.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px;margin-bottom:18px}
+h1{font-family:var(--f-display);font-weight:700;font-size:clamp(20px,2.6vw,28px);line-height:1.2;margin:0;text-wrap:balance}
+.sub{color:var(--muted);font-size:13px;margin-top:4px}
+.tabs{display:flex;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:4px;flex-wrap:wrap}
+.tabs button{font:inherit;font-weight:600;font-size:14px;border:0;background:transparent;color:var(--muted);padding:8px 14px;border-radius:7px;cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--accent);color:#fff}
+.tabs button:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* Prototype */
+.proto{display:grid;grid-template-columns:minmax(300px,380px) minmax(0,1fr) minmax(0,300px);gap:18px;align-items:start}
+@media (max-width:1100px){.proto{grid-template-columns:minmax(300px,380px) minmax(0,1fr)} .card-col{grid-column:1/-1}}
+@media (max-width:720px){.proto{grid-template-columns:minmax(0,1fr)}}
+.controls{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin-bottom:10px;font-size:13px;color:var(--muted)}
+.btn{font:inherit;font-size:13px;font-weight:600;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:6px 12px;border-radius:8px;cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+label.chk{display:inline-flex;gap:6px;align-items:center;cursor:pointer}
+
+.phone{background:var(--chat-bg);border-radius:26px;padding:10px;box-shadow:0 10px 30px rgba(10,20,40,.18);display:flex;flex-direction:column;height:680px;max-height:78vh;min-width:0}
+.phone-head{display:flex;align-items:center;gap:10px;padding:8px 10px 10px;border-bottom:1px solid #1d2a38;color:var(--chat-ink)}
+.ava{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#2b5d8f,#b8862b);display:grid;place-items:center;font-family:var(--f-display);font-size:13px;color:#fff}
+.phone-head b{display:block;font-size:14px}.phone-head small{color:var(--chat-muted);font-size:12px}
+.chat{flex:1;overflow-y:auto;padding:12px 6px;display:flex;flex-direction:column;gap:8px;scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){.chat{scroll-behavior:auto}}
+.msg{max-width:88%;padding:8px 11px;border-radius:14px;font-size:14px;line-height:1.42;color:var(--chat-ink);white-space:pre-line;overflow-wrap:anywhere}
+.msg.bot{background:var(--bubble);align-self:flex-start;border-bottom-left-radius:4px}
+.msg.me{background:var(--bubble-me);align-self:flex-end;border-bottom-right-radius:4px}
+.msg.sys{align-self:center;background:transparent;color:var(--chat-muted);font-size:12px;padding:2px}
+.msg a{color:#7fb8f5}
+.tag{display:inline-block;font-family:var(--f-mono);font-size:10px;color:var(--chat-muted);margin-bottom:3px;cursor:pointer}
+.kb{display:grid;grid-template-columns:1fr 1fr;gap:5px;max-width:100%;align-self:stretch}
+.kb button{font:inherit;font-size:13px;font-weight:500;background:var(--kb);color:var(--chat-ink);border:0;border-radius:9px;padding:9px 6px;cursor:pointer;min-width:0;overflow-wrap:anywhere}
+.kb button.full{grid-column:1/-1}
+.kb button:hover:not(:disabled){background:#2c4058}
+.kb button.on{background:var(--kb-on)}
+.kb button:disabled{opacity:.45;cursor:default}
+.composer{display:flex;gap:6px;padding:8px 4px 2px;border-top:1px solid #1d2a38;position:relative}
+.composer input{flex:1;min-width:0;font:inherit;font-size:14px;background:#182433;border:1px solid #243446;color:var(--chat-ink);border-radius:18px;padding:8px 12px}
+.composer input::placeholder{color:var(--chat-muted)}
+.composer button{font:inherit;font-size:13px;font-weight:600;border:0;border-radius:18px;padding:0 12px;background:#243446;color:var(--chat-ink);cursor:pointer}
+.composer button.send{background:var(--bubble-me)}
+.composer button:disabled{opacity:.4;cursor:default}
+.menu-pop{position:absolute;bottom:52px;left:4px;background:#1b2838;border:1px solid #2c3d52;border-radius:12px;padding:4px;display:flex;flex-direction:column;min-width:200px;z-index:2}
+.menu-pop button{font:inherit;font-size:14px;text-align:left;background:transparent;border:0;color:var(--chat-ink);padding:9px 12px;border-radius:8px;cursor:pointer}
+.menu-pop button:hover{background:#243446}
+
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px;min-width:0}
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.node-id{font-family:var(--f-display);font-size:13px;color:var(--accent);background:var(--accent-soft);border-radius:6px;padding:2px 7px;margin-right:8px}
+.panel h2{font-family:var(--f-display);font-weight:500;font-size:19px;margin:6px 0 14px;display:flex;align-items:center;flex-wrap:wrap;gap:4px}
+.spec-row{display:grid;grid-template-columns:140px minmax(0,1fr);gap:4px 14px;padding:10px 0;border-top:1px solid var(--line)}
+@media (max-width:520px){.spec-row{grid-template-columns:minmax(0,1fr)}}
+.spec-row>.k{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;padding-top:2px}
+.bottext{background:var(--gold-soft);border-radius:8px;padding:10px 12px;white-space:pre-line}
+.spec-row ul{margin:0;padding-left:18px}
+.spec-row li+li{margin-top:4px}
+.tbl-wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{text-align:left;vertical-align:top;padding:7px 9px;border-bottom:1px solid var(--line)}
+th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.goto{font:inherit;font-size:12px;font-family:var(--f-mono);border:1px solid var(--line);background:var(--accent-soft);color:var(--accent);border-radius:6px;padding:1px 6px;cursor:pointer}
+.mono{font-family:var(--f-mono);font-size:12.5px}
+
+.card-col .panel{padding:16px}
+.field{padding:8px 0;border-top:1px solid var(--line);transition:background .4s}
+.field:first-of-type{border-top:0}
+.field .n{font-family:var(--f-mono);font-size:11.5px;color:var(--muted);overflow-wrap:anywhere}
+.field .v{font-family:var(--f-mono);font-size:13px;overflow-wrap:anywhere}
+.field .v.empty{color:var(--muted);opacity:.6}
+.field.flash{background:var(--ok-soft)}
+@media (prefers-reduced-motion:reduce){.field{transition:none}}
+.hint{font-size:12.5px;color:var(--muted);margin-top:10px}
+
+/* Map */
+.lanes{display:flex;flex-direction:column;gap:14px}
+.lane{display:grid;grid-template-columns:170px minmax(0,1fr);gap:12px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+@media (max-width:640px){.lane{grid-template-columns:minmax(0,1fr)}}
+.lane-name{font-family:var(--f-display);font-size:14px;font-weight:500}
+.lane-name small{display:block;font-family:var(--f-body);font-size:12px;color:var(--muted);font-weight:400}
+.flow{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.chip{font:inherit;display:inline-flex;flex-direction:column;align-items:flex-start;gap:1px;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:10px;padding:7px 11px;cursor:pointer;text-align:left}
+.chip b{font-family:var(--f-mono);font-size:11px;color:var(--accent)}
+.chip span{font-size:13.5px;font-weight:600}
+.chip:hover,.chip.sel{border-color:var(--accent);background:var(--accent-soft)}
+.chip.svc{border-style:dashed}
+.arrow{color:var(--muted);font-size:16px}
+.branch{font-size:12.5px;color:var(--muted);margin-top:8px;grid-column:2}
+@media (max-width:640px){.branch{grid-column:1}}
+.map-detail{margin-top:16px}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12.5px;color:var(--muted);margin-bottom:12px}
+
+.status{display:inline-block;font-size:11.5px;font-weight:700;border-radius:999px;padding:2px 8px;white-space:nowrap}
+.status.have{background:var(--ok-soft);color:var(--ok)}
+.status.make{background:var(--gold-soft);color:var(--gold)}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:10px;font-size:13.5px;z-index:9}
+</style>
+</head><body>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>B2C-бот Интуриста: ветка туриста</h1>
+      <div class="sub">ТЗ для Fasttrack и Mindbox · Telegram · версия 1.1 · 29 сентября 2026</div>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="Разделы">
+      <button role="tab" id="tab-proto" aria-selected="true" data-tab="proto">Прототип</button>
+      <button role="tab" id="tab-map" aria-selected="false" data-tab="map">Карта сценария</button>
+      <button role="tab" id="tab-fields" aria-selected="false" data-tab="fields">Поля Mindbox</button>
+    </nav>
+  </header>
+
+  <section id="view-proto">
+    <div class="controls">
+      <button class="btn" id="restart">Начать заново</button>
+      <label class="chk"><input type="checkbox" id="hasCity"> в карточке уже есть город из заявки</label>
+    </div>
+    <div class="proto">
+      <div class="phone" aria-label="Прототип бота">
+        <div class="phone-head"><div class="ava">И</div><div><b>Интурист</b><small>бот</small></div></div>
+        <div class="chat" id="chat" aria-live="polite"></div>
+        <form class="composer" id="composer" autocomplete="off">
+          <button type="button" id="menuBtn" title="Постоянное меню">☰</button>
+          <input id="textIn" placeholder="Сообщение" aria-label="Сообщение боту">
+          <button type="submit" class="send" id="sendBtn">➤</button>
+          <div class="menu-pop" id="menuPop" hidden>
+            <button type="button" data-cmd="П1">Подобрать тур</button>
+            <button type="button" data-cmd="Р1">Мои подписки</button>
+            <button type="button" data-cmd="О1">Отписаться</button>
+          </div>
+        </form>
+      </div>
+      <div class="panel" id="spec"></div>
+      <div class="card-col">
+        <div class="panel">
+          <div class="eyebrow">Карточка в Mindbox</div>
+          <div id="card" style="margin-top:8px"></div>
+          <div class="hint">Поля подсвечиваются, когда бот их записывает.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="view-map" hidden>
+    <div class="legend"><span>Нажмите на шаг, чтобы увидеть его описание.</span><span>Пунктир — служебный шаг без сообщения.</span></div>
+    <div class="lanes" id="lanes"></div>
+    <div class="panel map-detail" id="mapDetail"></div>
+  </section>
+
+  <section id="view-fields" hidden>
+    <div class="panel">
+      <div class="eyebrow">Поля карточки туриста</div>
+      <p style="margin:6px 0 12px;color:var(--muted);font-size:13.5px">Массивы — строки в кавычках, как у агентского поля «[Ft] Агент — направление продаж». Незаполненное поле не передаём вовсе, ни пустой строкой, ни пустым массивом.</p>
+      <div class="tbl-wrap"><table id="fieldsTbl"></table></div>
+    </div>
+  </section>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const DIRS=['Турция','Россия','Абхазия','Египет','ОАЭ','Вьетнам','Таиланд','Беларусь','Мальдивы','Казахстан'];
+const RUB=[['Спеццены и горящие туры','спеццены'],['Экскурсия месяца','экскурсия месяца'],['Документы и визы','документы и визы'],['Город в картинках','город в картинках']];
+const RUBVAL='["спеццены", "экскурсия месяца", "документы и визы", "город в картинках"]';
+
+const F={type:'Турист или агент',tg:'telegramId',src:'[Ft] Источник подписки',sub:'subTG',city:'Город туриста',rub:'[Ft] Подписки на рубрики',dir:'[Ft] Турист — направление интереса',rest:'[Ft] Турист — тип отдыха',who:'[Ft] Турист — состав поездки',when:'[Ft] Турист — горизонт поездки',status:'[Ft] Статус туриста'};
+
+const NODES={
+ 'Т0':{lane:'Вход',title:'Вход в бота',svc:true,
+   when:'Турист нажал Start или отправил /start. Ссылка может прийти с параметром: t.me/<бот>?start=<источник>.',
+   logic:['Ищем карточку по telegramId.','Если subTG = да → сразу Т3 «Меню», согласие повторно не спрашиваем.','Если карточки нет или subTG = нет (турист раньше отписался) → Т1 «Согласие».'],
+   write:['Турист или агент = «турист»','telegramId','[Ft] Источник подписки = значение параметра start. Нет параметра → «прямой». Пишем только при первом входе.']},
+ 'Т1':{lane:'Вход',title:'Согласие',
+   when:'Новый турист или турист, который ранее отписался. Механика как у агентов: без согласия дальше не ведём.',
+   text:'Чтобы продолжить, нужно ваше согласие с условиями.\n\n📄 Политика обработки персональных данных\n📄 Согласие на получение рекламно-информационных сообщений\n\nЭто нужно, чтобы присылать вам подборки туров и спеццены.',
+   buttons:[['Принимаю и продолжаю','Т2','subTG = да; [Ft] Подписки на рубрики = все четыре '+RUBVAL+' (только если поле пустое). Если город уже есть — сразу Т3.']],
+   input:'Любой текст вместо кнопки → «Чтобы продолжить, нажмите «Принимаю и продолжаю»» + та же кнопка и ссылки.'},
+ 'Т2':{lane:'Вход',title:'Город',
+   when:'Сразу после согласия. Если «Город туриста» уже заполнен (из заявки) — шаг пропускаем, сразу Т3.',
+   text:'Из какого вы города? Так в подборки попадут туры с вылетом от вас.',
+   input:'Текстом, без кнопок. Формат не проверяем, пишем как ввёл турист. Пустое сообщение → повторяем вопрос.',
+   write:['Город туриста = введённый текст → Т3'],
+   logic:['Как шаг города у агентов. У новых туристов без заявки города нет.']},
+ 'Т3':{lane:'Вход',title:'Главное меню',
+   when:'После согласия и города, после завершения любой ветки, по кнопке «В меню».',
+   text:'Чем помочь?',
+   buttons:[['Подобрать тур','П1','—'],['Мои подписки','Р1','—']],
+   logic:['Постоянное меню Telegram (☰ у поля ввода), доступно из любой точки: «Подобрать тур», «Мои подписки», «Отписаться».','Команда /stop из любой точки → сразу О2, без вопроса.']},
+ 'П1':{lane:'Подбор тура',title:'Направление',
+   when:'Кнопка «Подобрать тур». Также из Р1, если направление ещё не заполнено (тогда после П1 → Р2).',
+   text:'Подберу варианты за 4 вопроса. Первый — куда хотите поехать?\n\nМожно выбрать несколько. Если нужного направления нет в списке — напишите его текстом, через запятую, если их несколько\n\nНапример: Абхазия, Грузия, Сочи',
+   buttons:[['10 кнопок направлений','остаёмся на П1','Кнопка отмечается ✅, повторное нажатие снимает'],['Интересны все','П2','[Ft] Турист — направление интереса = ["все направления"]'],['Готово','П2','[Ft] Турист — направление интереса = отмеченные кнопки + написанное текстом, одним массивом: ["Турция", "ОАЭ", "Абхазия", "Сочи"]']],
+   input:'Текст принимаем до «Готово»: делим по запятым, обрезаем пробелы, добавляем в тот же массив, что и кнопки. Отдельного поля под текст нет. После текста бот ждёт «Готово».',
+   logic:['Механика выбора как у агентов. Отличие: у агентов текст идёт в отдельное поле, у туристов — всё в одно.','«Готово» без выбора и без текста → «Выберите хотя бы одно направление или нажмите «Интересны все»».','Повторный подбор перезаписывает поле.']},
+ 'П2':{lane:'Подбор тура',title:'Тип отдыха',text:'Какой отдых ближе?',
+   buttons:['Пляж','Экскурсии','Горы','Санаторий'].map(b=>[b,'П3','[Ft] Турист — тип отдыха = «'+b.toLowerCase()+'»']),
+   input:'Текст вместо кнопки → повтор вопроса.'},
+ 'П3':{lane:'Подбор тура',title:'Состав поездки',text:'С кем едете?',
+   buttons:['Вдвоём','С детьми','Компанией','Один'].map(b=>[b,'П4','[Ft] Турист — состав поездки = «'+b.toLowerCase()+'»']),
+   input:'Текст вместо кнопки → повтор вопроса.'},
+ 'П4':{lane:'Подбор тура',title:'Горизонт поездки',text:'Когда планируете?',
+   buttons:[['В ближайшие 1–2 месяца','П5','[Ft] Турист — горизонт поездки = «1–2 месяца»'],['Через 3–6 месяцев','П5','… = «3–6 месяцев»'],['Позже, пока присматриваюсь','П5','… = «позже»']],
+   input:'Текст вместо кнопки → повтор вопроса.',
+   logic:['Поле решает, когда слать подборку, а не что.']},
+ 'П5':{lane:'Подбор тура',title:'Итог подбора',
+   text:'Спасибо, запомнил. Спеццены по вашим направлениям буду присылать сюда — ближе к срокам, которые вы указали.\n\nА пока можно посмотреть все туры на сайте.',
+   buttons:[['Смотреть все туры','ссылка на сайт','— (ссылку уточняем)'],['В меню','Т3','—']],
+   write:['[Ft] Статус туриста = «выбирает»']},
+ 'Р1':{lane:'Мои подписки',title:'Выбор рубрик',
+   when:'Кнопка «Мои подписки» в меню или «Настроить рубрики» в О1.',
+   text:'Что присылать? Отметьте нужное — по снятым рубрикам писать не буду.',
+   buttons:[['4 рубрики','остаёмся на Р1','✅ ставится / снимается; при открытии включённые уже отмечены'],['Готово','Р2','[Ft] Подписки на рубрики = отмеченные']],
+   logic:['Сняты все четыре + «Готово» → О1.','Если направление интереса пустое → после «Готово» задаём П1 (только направление), затем Р2.']},
+ 'Р2':{lane:'Мои подписки',title:'Рубрики сохранены',
+   text:'Сохранил. Буду присылать: {{рубрики}}. Изменить можно в любой момент в «Мои подписки».',
+   buttons:[['В меню','Т3','—']]},
+ 'О1':{lane:'Отписка',title:'Отключить всё?',
+   when:'«Отписаться» в постоянном меню или сняты все рубрики в Р1.',
+   text:'Отключить все рассылки? Можно оставить только нужные рубрики — например, одни спеццены.',
+   buttons:[['Настроить рубрики','Р1','—'],['Отписаться от всего','О2','—']]},
+ 'О2':{lane:'Отписка',title:'Рассылки отключены',
+   when:'«Отписаться от всего» или команда /stop.',
+   text:'Готово, рассылки отключены. Если передумаете — отправьте /start.',
+   write:['subTG = нет','Остальные поля не трогаем: при повторной подписке подбор и рубрики заново не заполнять.'],
+   logic:['После /start такой турист снова проходит Т1 — согласие после отзыва берём заново.']},
+};
+const LANES=[
+ ['Вход','/start',['Т0','Т1','Т2','Т3'],'Уже подписан (subTG = да) → из Т0 сразу в Т3. Город уже есть → из Т1 сразу в Т3.'],
+ ['Подбор тура','кнопка «Подобрать тур»',['П1','П2','П3','П4','П5'],'П5 → «В меню» → Т3.'],
+ ['Мои подписки','кнопка «Мои подписки»',['Р1','Р2'],'Направление пустое → между Р1 и Р2 задаём П1. Сняты все рубрики → О1.'],
+ ['Отписка','☰ «Отписаться» или /stop',['О1','О2'],'/stop → сразу О2. «Настроить рубрики» в О1 → Р1. Новый /start после О2 → Т1.'],
+];
+const FIELDS=[
+ ['Турист или агент','строка','«турист»','Т0','have','Не меняется'],
+ ['telegramId','авто','—','Т0','have','—'],
+ ['subTG','да / нет','да / нет','Т1, О2','have','Последнее значение'],
+ ['[Ft] Источник подписки','строка','Параметр start; без параметра — «прямой»','Т0','make','Только первый вход'],
+ ['[Ft] Подписки на рубрики','массив строк',RUBVAL+' — подмножество','Т1 (все, если пусто), Р1','make','Последний выбор'],
+ ['[Ft] Турист — направление интереса','массив строк','Кнопки и написанное текстом вместе: ["Турция", "ОАЭ", "Абхазия"]; или ["все направления"]','П1','make','Последний ответ'],
+ ['[Ft] Турист — тип отдыха','строка','пляж / экскурсии / горы / санаторий','П2','make','Последний ответ'],
+ ['[Ft] Турист — состав поездки','строка','вдвоём / с детьми / компанией / один','П3','make','Последний ответ'],
+ ['[Ft] Турист — горизонт поездки','строка','1–2 месяца / 3–6 месяцев / позже','П4','make','Последний ответ'],
+ ['[Ft] Статус туриста','строка','выбирает','П5','make','Последний ответ'],
+ ['Город туриста','строка','Как ввёл турист, например «Казань»','Т2','have','Только если пустое'],
+];
+
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let S, cur, sel, typed, mode, liveKb;
+
+/* ---------- Spec rendering ---------- */
+function gotoBtn(to){return /^[ТПРО]\d$/.test(to)?`<button class="goto" data-spec="${to}">${to}</button>`:esc(to)}
+function specHTML(id){
+  const n=NODES[id]; let h=`<div class="eyebrow">${esc(n.lane)}${n.svc?' · служебный шаг':''}</div><h2><span class="node-id">${id}</span>${esc(n.title)}</h2>`;
+  const row=(k,v)=>`<div class="spec-row"><div class="k">${k}</div><div>${v}</div></div>`;
+  if(n.when)h+=row('Когда',esc(n.when));
+  if(n.text)h+=row('Текст',`<div class="bottext">${esc(n.text)}</div>`);
+  if(n.buttons)h+=row('Кнопки',`<div class="tbl-wrap"><table><tr><th>Кнопка</th><th>Куда</th><th>Что пишем</th></tr>${n.buttons.map(b=>`<tr><td>${esc(b[0])}</td><td>${gotoBtn(b[1])}</td><td class="mono">${esc(b[2])}</td></tr>`).join('')}</table></div>`);
+  if(n.input)h+=row('Ввод текстом',esc(n.input));
+  if(n.logic)h+=row('Логика',`<ul>${n.logic.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`);
+  if(n.write)h+=row('Пишем в Mindbox',`<ul class="mono">${n.write.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`);
+  return h;
+}
+function showSpec(id){$('#spec').innerHTML=specHTML(id)}
+document.addEventListener('click',e=>{
+  const g=e.target.closest('[data-spec]'); if(!g)return;
+  const id=g.dataset.spec;
+  if(!$('#view-map').hidden){selectMap(id)} else showSpec(id);
+});
+
+/* ---------- Mindbox card ---------- */
+function fmt(v){return Array.isArray(v)?'['+v.map(x=>'"'+x+'"').join(', ')+']':v}
+function renderCard(changed=[]){
+  $('#card').innerHTML=Object.entries(F).map(([k,name])=>{
+    const v=S[k]; const empty=v===undefined||(Array.isArray(v)&&!v.length);
+    return `<div class="field${changed.includes(k)?' flash':''}"><div class="n">${esc(name)}</div><div class="v${empty?' empty':''}">${empty?'не передаём':esc(fmt(v))}</div></div>`;
+  }).join('');
+  if(changed.length)setTimeout(()=>document.querySelectorAll('.field.flash').forEach(x=>x.classList.remove('flash')),1300);
+}
+function write(obj){Object.assign(S,obj);renderCard(Object.keys(obj))}
+
+/* ---------- Chat ---------- */
+function add(cls,html){const d=document.createElement('div');d.className='msg '+cls;d.innerHTML=html;$('#chat').appendChild(d);$('#chat').scrollTop=1e6;return d}
+function me(t){add('me',esc(t))}
+function lockKb(){if(liveKb){liveKb.querySelectorAll('button').forEach(b=>b.disabled=true);liveKb=null}}
+function kb(list,onClick){
+  lockKb();
+  const k=document.createElement('div');k.className='kb';
+  list.forEach(([label,full,val,on])=>{const b=document.createElement('button');b.textContent=(on?'✅ ':'')+label;if(full)b.classList.add('full');if(on)b.classList.add('on');b.onclick=()=>onClick(val??label,b);k.appendChild(b)});
+  $('#chat').appendChild(k);$('#chat').scrollTop=1e6;liveKb=k;return k;
+}
+function botMsg(id,text){
+  const t=esc(text??NODES[id].text).replace(/📄 ([^\n]+)/g,'📄 <a href="#" onclick="return false">$1</a>');
+  add('bot',`<span class="tag" data-spec="${id}">${id} · ${esc(NODES[id].title)}</span><br>${t}`);
+}
+function setInput(on,ph){ $('#textIn').placeholder=ph||'Сообщение'; }
+
+function go(id,opts={}){
+  cur=id; showSpec(id); $('#menuPop').hidden=true;
+  const menuOk=S.sub==='да';
+  $('#menuBtn').disabled=!menuOk;
+  switch(id){
+    case 'Т0': {
+      add('sys','Турист нажал START');
+      const ch={type:'турист',tg:'123456789'}; if(S.src===undefined)ch.src='прямой'; write(ch);
+      add('sys','Т0: проверка карточки → '+(S.sub==='да'?'подписан, сразу меню':'согласия нет → Т1'));
+      return go(S.sub==='да'?'Т3':'Т1');
+    }
+    case 'Т1': botMsg('Т1',opts.short?'Чтобы продолжить, нажмите «Принимаю и продолжаю»\n\n📄 Политика обработки персональных данных\n📄 Согласие на получение рекламно-информационных сообщений':undefined);
+      kb([['Принимаю и продолжаю',1]],v=>{me(v);const ch={sub:'да'};if(!S.rub||!S.rub.length)ch.rub=RUB.map(r=>r[1]);write(ch);go(S.city?'Т3':'Т2')});
+      setInput(true,'Можно написать текст — бот повторит просьбу');break;
+    case 'Т2': lockKb(); botMsg('Т2'); setInput(true,'Напишите город, например Казань'); break;
+    case 'Т3': botMsg('Т3'); kb([['Подобрать тур'],['Мои подписки']],v=>{me(v);go(v==='Подобрать тур'?'П1':'Р1')}); setInput(true); break;
+    case 'П1': mode=opts.fromSubs?'subs':'pick'; sel=new Set(); typed=[]; botMsg('П1'); drawDirKb(); setInput(true,'Своё направление, через запятую'); break;
+    case 'П2': case 'П3': case 'П4': {
+      botMsg(id); const key={П2:'rest',П3:'who',П4:'when'}[id]; const next={П2:'П3',П3:'П4',П4:'П5'}[id];
+      const vals={П4:{'В ближайшие 1–2 месяца':'1–2 месяца','Через 3–6 месяцев':'3–6 месяцев','Позже, пока присматриваюсь':'позже'}};
+      const btns=NODES[id].buttons.map(b=>[b[0],id==='П4']);
+      kb(btns,v=>{me(v);write({[key]:vals[id]?vals[id][v]:v.toLowerCase()});go(next)}); setInput(true); break;
+    }
+    case 'П5': botMsg('П5'); write({status:'выбирает'});
+      kb([['Смотреть все туры',1],['В меню',1]],v=>{ if(v==='В меню'){me(v);go('Т3')} else toast('Здесь откроется сайт Интуриста (ссылку уточняем)')}); break;
+    case 'Р1': sel=new Set(S.rub||[]); botMsg('Р1'); drawRubKb(); setInput(true); break;
+    case 'Р2': { const names=RUB.filter(r=>(S.rub||[]).includes(r[1])).map(r=>r[0]).join(', ');
+      botMsg('Р2','Сохранил. Буду присылать: '+names+'. Изменить можно в любой момент в «Мои подписки».'); kb([['В меню',1]],v=>{me(v);go('Т3')}); break; }
+    case 'О1': botMsg('О1'); kb([['Настроить рубрики',1],['Отписаться от всего',1]],v=>{me(v);go(v==='Настроить рубрики'?'Р1':'О2')}); break;
+    case 'О2': lockKb(); botMsg('О2'); write({sub:'нет'}); $('#menuBtn').disabled=true; setInput(true,'Отправьте /start, чтобы вернуться'); break;
+  }
+}
+function drawDirKb(){
+  if(liveKb)liveKb.remove(),liveKb=null;
+  const list=DIRS.map(d=>[d,0,d,sel.has(d)]).concat([['Интересны все',1,'__all'],['Готово',1,'__done']]);
+  kb(list,(v)=>{
+    if(v==='__all'){lockKb();me('Интересны все');write({dir:['все направления']});return afterDir()}
+    if(v==='__done'){
+      const arr=[...sel,...typed];
+      if(!arr.length){add('bot','Выберите хотя бы одно направление или нажмите «Интересны все»');return drawDirKb()}
+      lockKb();me('Готово');write({dir:arr});return afterDir();
+    }
+    sel.has(v)?sel.delete(v):sel.add(v); drawDirKb();
+  });
+}
+function afterDir(){ if(mode==='subs'){mode=null;go('Р2')} else go('П2') }
+function drawRubKb(){
+  if(liveKb)liveKb.remove(),liveKb=null;
+  kb(RUB.map(r=>[r[0],1,r[1],sel.has(r[1])]).concat([['Готово',1,'__done']]),v=>{
+    if(v==='__done'){lockKb();me('Готово');
+      if(!sel.size)return go('О1');
+      write({rub:RUB.map(r=>r[1]).filter(x=>sel.has(x))});
+      if(!S.dir||!S.dir.length){add('sys','Направление пустое → задаём П1');return go('П1',{fromSubs:true})}
+      return go('Р2');
+    }
+    sel.has(v)?sel.delete(v):sel.add(v); drawRubKb();
+  });
+}
+$('#composer').addEventListener('submit',e=>{
+  e.preventDefault(); const t=$('#textIn').value.trim(); if(!t)return; $('#textIn').value=''; me(t);
+  if(t==='/stop'){lockKb();return S.sub==='да'?go('О2'):add('sys','Уже отписан')}
+  if(t==='/start'){lockKb();return go('Т0')}
+  if(cur==='Т1')return go('Т1',{short:true});
+  if(cur==='Т2'){write({city:t});return go('Т3')}
+  if(cur==='П1'){t.split(',').map(x=>x.trim()).filter(Boolean).forEach(x=>typed.push(x));add('sys','Добавлено в массив: '+typed.join(', ')+' · ждём «Готово»');return drawDirKb()}
+  if(['П2','П3','П4'].includes(cur))return go(cur);
+  if(cur==='О2')return add('sys','Бот ждёт /start');
+  add('sys','Бот ждёт нажатия кнопки');
+});
+$('#menuBtn').onclick=()=>{$('#menuPop').hidden=!$('#menuPop').hidden};
+$('#menuPop').addEventListener('click',e=>{const b=e.target.closest('[data-cmd]');if(!b)return;$('#menuPop').hidden=true;me(b.textContent);lockKb();go(b.dataset.cmd)});
+
+function restart(prefill){
+  S={}; if($('#hasCity').checked)S.city='Москва';
+  if(prefill)Object.assign(S,prefill);
+  $('#chat').innerHTML=''; liveKb=null; renderCard(); cur=null;
+  if(prefill){add('sys','Карточка заполнена для примера');return}
+  showSpec('Т0');
+  kb([['START',1]],()=>{me('/start');go('Т0')});
+  setInput(true,'Или отправьте /start');
+}
+$('#restart').onclick=()=>restart();
+$('#hasCity').onchange=()=>restart();
+
+/* ---------- Map ---------- */
+let mapSel='Т0';
+function drawMap(){
+  $('#lanes').innerHTML=LANES.map(([name,entry,ids,note])=>`<div class="lane"><div class="lane-name">${esc(name)}<small>вход: ${esc(entry)}</small></div><div><div class="flow">${ids.map((id,i)=>`${i?'<span class="arrow" aria-hidden="true">→</span>':''}<button class="chip${NODES[id].svc?' svc':''}${id===mapSel?' sel':''}" data-map="${id}"><b>${id}</b><span>${esc(NODES[id].title)}</span></button>`).join('')}</div><div class="branch">${esc(note)}</div></div></div>`).join('');
+}
+function selectMap(id){mapSel=id;drawMap();$('#mapDetail').innerHTML=specHTML(id)+`<div class="spec-row"><div class="k"></div><div><button class="btn" data-try="${id}">Открыть этот шаг в прототипе</button></div></div>`}
+$('#lanes').addEventListener('click',e=>{const c=e.target.closest('[data-map]');if(c)selectMap(c.dataset.map)});
+$('#mapDetail').addEventListener('click',e=>{const b=e.target.closest('[data-try]');if(!b)return;const id=b.dataset.try;
+  tab('proto');
+  if(['Т0','Т1'].includes(id)){restart();if(id==='Т1'){me('/start');go('Т0')}return}
+  restart({type:'турист',tg:'123456789',src:'прямой',sub:'да',city:S.city||'Москва',rub:RUB.map(r=>r[1])});
+  go(id==='Т2'?'Т2':id);
+});
+
+/* ---------- Fields ---------- */
+$('#fieldsTbl').innerHTML='<tr><th>Поле</th><th>Тип</th><th>Значения</th><th>Где пишется</th><th>Статус</th><th>Перезапись</th></tr>'+FIELDS.map(f=>`<tr><td class="mono">${esc(f[0])}</td><td>${esc(f[1])}</td><td class="mono">${esc(f[2])}</td><td>${f[3].split(/,\s*/).map(x=>{const m=x.match(/^([ТПРО]\d)(.*)$/);return m?gotoBtn(m[1])+esc(m[2]):esc(x)}).join(' ')}</td><td><span class="status ${f[4]}">${f[4]==='have'?'Есть':'Создать'}</span></td><td>${esc(f[5])}</td></tr>`).join('');
+$('#fieldsTbl').addEventListener('click',e=>{const g=e.target.closest('[data-spec]');if(g){e.stopPropagation();tab('map');selectMap(g.dataset.spec)}},true);
+
+/* ---------- Tabs ---------- */
+function tab(t){document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===t));['proto','map','fields'].forEach(x=>$('#view-'+x).hidden=x!==t);try{history.replaceState(null,'','#'+t)}catch(_){}}
+document.querySelector('.tabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(b)tab(b.dataset.tab)});
+function toast(t){const el=$('#toast');el.textContent=t;el.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>el.hidden=true,2200)}
+
+drawMap(); selectMap('Т0'); restart();
+const h=(location.hash||'').slice(1); if(['map','fields','proto'].includes(h))tab(h);
+</script>
+</body></html>
