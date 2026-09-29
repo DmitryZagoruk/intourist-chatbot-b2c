@@ -1,0 +1,343 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>B2C-бот Интуриста: ветка туриста</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Unbounded:wght@500;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: рабочий стол сценария — телефон с живым ботом слева, спецификация шага и карточка Mindbox справа */
+:root{
+  --bg:#eef1f5; --panel:#ffffff; --ink:#18212e; --muted:#5d6b7e; --line:#d6dde7;
+  --accent:#1f5fae; --accent-soft:#e3edf9; --gold:#b8862b; --gold-soft:#f7eedb;
+  --ok:#23835a; --ok-soft:#dff1e8;
+  --chat-bg:#0f1a26; --bubble:#1e2c3b; --bubble-me:#2b5d8f; --kb:#223245; --kb-on:#2f6a4c; --chat-ink:#e8eef5; --chat-muted:#8ea0b4;
+  --f-display:"Unbounded","Golos Text",system-ui,sans-serif;
+  --f-body:"Golos Text",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e141c; --panel:#161f2b; --ink:#e4eaf2; --muted:#93a2b5; --line:#2a3646;
+  --accent:#6aa8f0; --accent-soft:#1b2c42; --gold:#e0b35a; --gold-soft:#33291a;
+  --ok:#5fcf98; --ok-soft:#173327; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e141c; --panel:#161f2b; --ink:#e4eaf2; --muted:#93a2b5; --line:#2a3646;
+  --accent:#6aa8f0; --accent-soft:#1b2c42; --gold:#e0b35a; --gold-soft:#33291a;
+  --ok:#5fcf98; --ok-soft:#173327; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;margin:0}
+.wrap{max-width:1320px;margin:0 auto;padding-inline:16px;padding-block:20px 48px}
+header.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px;margin-bottom:18px}
+h1{font-family:var(--f-display);font-weight:700;font-size:clamp(20px,2.6vw,28px);line-height:1.2;margin:0;text-wrap:balance}
+.sub{color:var(--muted);font-size:13px;margin-top:4px}
+.tabs{display:flex;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:4px;flex-wrap:wrap}
+.tabs button{font:inherit;font-weight:600;font-size:14px;border:0;background:transparent;color:var(--muted);padding:8px 14px;border-radius:7px;cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--accent);color:#fff}
+.tabs button:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* Prototype */
+.proto{display:grid;grid-template-columns:minmax(300px,380px) minmax(0,1fr) minmax(0,300px);gap:18px;align-items:start}
+@media (max-width:1100px){.proto{grid-template-columns:minmax(300px,380px) minmax(0,1fr)} .card-col{grid-column:1/-1}}
+@media (max-width:720px){.proto{grid-template-columns:minmax(0,1fr)}}
+.controls{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin-bottom:10px;font-size:13px;color:var(--muted)}
+.btn{font:inherit;font-size:13px;font-weight:600;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:6px 12px;border-radius:8px;cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+label.chk{display:inline-flex;gap:6px;align-items:center;cursor:pointer}
+
+.phone{background:var(--chat-bg);border-radius:26px;padding:10px;box-shadow:0 10px 30px rgba(10,20,40,.18);display:flex;flex-direction:column;height:680px;max-height:78vh;min-width:0}
+.phone-head{display:flex;align-items:center;gap:10px;padding:8px 10px 10px;border-bottom:1px solid #1d2a38;color:var(--chat-ink)}
+.ava{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#2b5d8f,#b8862b);display:grid;place-items:center;font-family:var(--f-display);font-size:13px;color:#fff}
+.phone-head b{display:block;font-size:14px}.phone-head small{color:var(--chat-muted);font-size:12px}
+.chat{flex:1;overflow-y:auto;padding:12px 6px;display:flex;flex-direction:column;gap:8px;scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){.chat{scroll-behavior:auto}}
+.msg{max-width:88%;padding:8px 11px;border-radius:14px;font-size:14px;line-height:1.42;color:var(--chat-ink);white-space:pre-line;overflow-wrap:anywhere}
+.msg.bot{background:var(--bubble);align-self:flex-start;border-bottom-left-radius:4px}
+.msg.me{background:var(--bubble-me);align-self:flex-end;border-bottom-right-radius:4px}
+.msg.sys{align-self:center;background:transparent;color:var(--chat-muted);font-size:12px;padding:2px}
+.msg a{color:#7fb8f5}
+.tag{display:inline-block;font-family:var(--f-mono);font-size:10px;color:var(--chat-muted);margin-bottom:3px;cursor:pointer}
+.kb{display:grid;grid-template-columns:1fr 1fr;gap:5px;max-width:100%;align-self:stretch}
+.kb button{font:inherit;font-size:13px;font-weight:500;background:var(--kb);color:var(--chat-ink);border:0;border-radius:9px;padding:9px 6px;cursor:pointer;min-width:0;overflow-wrap:anywhere}
+.kb button.full{grid-column:1/-1}
+.kb button:hover:not(:disabled){background:#2c4058}
+.kb button.on{background:var(--kb-on)}
+.kb button:disabled{opacity:.45;cursor:default}
+.composer{display:flex;gap:6px;padding:8px 4px 2px;border-top:1px solid #1d2a38;position:relative}
+.composer input{flex:1;min-width:0;font:inherit;font-size:14px;background:#182433;border:1px solid #243446;color:var(--chat-ink);border-radius:18px;padding:8px 12px}
+.composer input::placeholder{color:var(--chat-muted)}
+.composer button{font:inherit;font-size:13px;font-weight:600;border:0;border-radius:18px;padding:0 12px;background:#243446;color:var(--chat-ink);cursor:pointer}
+.composer button.send{background:var(--bubble-me)}
+.composer button:disabled{opacity:.4;cursor:default}
+.menu-pop{position:absolute;bottom:52px;left:4px;background:#1b2838;border:1px solid #2c3d52;border-radius:12px;padding:4px;display:flex;flex-direction:column;min-width:200px;z-index:2}
+.menu-pop button{font:inherit;font-size:14px;text-align:left;background:transparent;border:0;color:var(--chat-ink);padding:9px 12px;border-radius:8px;cursor:pointer}
+.menu-pop button:hover{background:#243446}
+
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px;min-width:0}
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.node-id{font-family:var(--f-display);font-size:13px;color:var(--accent);background:var(--accent-soft);border-radius:6px;padding:2px 7px;margin-right:8px}
+.panel h2{font-family:var(--f-display);font-weight:500;font-size:19px;margin:6px 0 14px;display:flex;align-items:center;flex-wrap:wrap;gap:4px}
+.spec-row{display:grid;grid-template-columns:140px minmax(0,1fr);gap:4px 14px;padding:10px 0;border-top:1px solid var(--line)}
+@media (max-width:520px){.spec-row{grid-template-columns:minmax(0,1fr)}}
+.spec-row>.k{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;padding-top:2px}
+.bottext{background:var(--gold-soft);border-radius:8px;padding:10px 12px;white-space:pre-line}
+.spec-row ul{margin:0;padding-left:18px}
+.spec-row li+li{margin-top:4px}
+.tbl-wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{text-align:left;vertical-align:top;padding:7px 9px;border-bottom:1px solid var(--line)}
+th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.goto{font:inherit;font-size:12px;font-family:var(--f-mono);border:1px solid var(--line);background:var(--accent-soft);color:var(--accent);border-radius:6px;padding:1px 6px;cursor:pointer}
+.mono{font-family:var(--f-mono);font-size:12.5px}
+
+.card-col .panel{padding:16px}
+.field{padding:8px 0;border-top:1px solid var(--line);transition:background .4s}
+.field:first-of-type{border-top:0}
+.field .n{font-family:var(--f-mono);font-size:11.5px;color:var(--muted);overflow-wrap:anywhere}
+.field .v{font-family:var(--f-mono);font-size:13px;overflow-wrap:anywhere}
+.field .v.empty{color:var(--muted);opacity:.6}
+.field.flash{background:var(--ok-soft)}
+@media (prefers-reduced-motion:reduce){.field{transition:none}}
+.hint{font-size:12.5px;color:var(--muted);margin-top:10px}
+
+/* Map */
+.lanes{display:flex;flex-direction:column;gap:14px}
+.lane{display:grid;grid-template-columns:170px minmax(0,1fr);gap:12px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+@media (max-width:640px){.lane{grid-template-columns:minmax(0,1fr)}}
+.lane-name{font-family:var(--f-display);font-size:14px;font-weight:500}
+.lane-name small{display:block;font-family:var(--f-body);font-size:12px;color:var(--muted);font-weight:400}
+.flow{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.chip{font:inherit;display:inline-flex;flex-direction:column;align-items:flex-start;gap:1px;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:10px;padding:7px 11px;cursor:pointer;text-align:left}
+.chip b{font-family:var(--f-mono);font-size:11px;color:var(--accent)}
+.chip span{font-size:13.5px;font-weight:600}
+.chip:hover,.chip.sel{border-color:var(--accent);background:var(--accent-soft)}
+.chip.svc{border-style:dashed}
+.arrow{color:var(--muted);font-size:16px}
+.branch{font-size:12.5px;color:var(--muted);margin-top:8px;grid-column:2}
+@media (max-width:640px){.branch{grid-column:1}}
+.map-detail{margin-top:16px}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12.5px;color:var(--muted);margin-bottom:12px}
+
+.status{display:inline-block;font-size:11.5px;font-weight:700;border-radius:999px;padding:2px 8px;white-space:nowrap}
+.status.have{background:var(--ok-soft);color:var(--ok)}
+.status.make{background:var(--gold-soft);color:var(--gold)}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:10px;font-size:13.5px;z-index:9}
+</style></head><body>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>B2C-бот Интуриста: ветка туриста</h1>
+      <div class="sub">ТЗ для Fasttrack и Mindbox · Telegram · версия 2.0 · 29 сентября 2026</div>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="Разделы">
+      <button role="tab" id="tab-proto" aria-selected="true" data-tab="proto">Прототип</button>
+      <button role="tab" id="tab-map" aria-selected="false" data-tab="map">Карта сценария</button>
+      <button role="tab" id="tab-fields" aria-selected="false" data-tab="fields">Поля Mindbox</button>
+    </nav>
+  </header>
+
+  <section id="view-proto">
+    <div class="controls">
+      <button class="btn" id="restart">Начать заново</button>
+      <label class="chk"><input type="checkbox" id="oldClient"> бывший клиент: в карточке уже есть имя, город и телефон</label>
+      <button class="btn" id="dayBtn" title="Смоделировать напоминание Н1">Прошли сутки →</button>
+    </div>
+    <div class="proto">
+      <div class="phone" aria-label="Прототип бота">
+        <div class="phone-head"><div class="ava">И</div><div><b>Интурист</b><small>бот</small></div></div>
+        <div class="chat" id="chat" aria-live="polite"></div>
+        <div class="composer" id="composer">
+          <button type="button" id="menuBtn" title="Постоянное меню">☰</button>
+          <input id="textIn" placeholder="Сообщение" aria-label="Сообщение боту" autocomplete="off" enterkeyhint="send">
+          <button type="button" class="send" id="sendBtn" aria-label="Отправить">➤</button>
+          <div class="menu-pop" id="menuPop" hidden>
+            <button type="button" data-cmd="П1">Подобрать тур</button>
+            <button type="button" data-cmd="Р1">Мои подписки</button>
+            <button type="button" data-cmd="Т7">Мои данные</button>
+            <button type="button" data-cmd="О1">Отписаться</button>
+          </div>
+        </div>
+      </div>
+      <div class="panel" id="spec"></div>
+      <div class="card-col">
+        <div class="panel">
+          <div class="eyebrow">Карточка в Mindbox</div>
+          <div id="card" style="margin-top:8px"></div>
+          <div class="hint">Поля подсвечиваются, когда бот их записывает.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="view-map" hidden>
+    <div class="legend"><span>Нажмите на шаг, чтобы увидеть его описание.</span><span>Пунктир — служебный шаг без сообщения.</span></div>
+    <div class="lanes" id="lanes"></div>
+    <div class="panel map-detail" id="mapDetail"></div>
+    <div class="panel map-detail" id="rules"></div>
+  </section>
+
+  <section id="view-fields" hidden>
+    <div class="panel">
+      <div class="eyebrow">Поля карточки туриста</div>
+      <p style="margin:6px 0 12px;color:var(--muted);font-size:13.5px">Массивы — строки в кавычках, как у агентского поля «[Ft] Агент — направление продаж». Незаполненное поле не передаём вовсе, ни пустой строкой, ни пустым массивом.</p>
+      <div class="tbl-wrap"><table id="fieldsTbl"></table></div>
+    </div>
+  </section>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const {DIRS,RUB,RUBVAL,RULES,NODES,LANES,FIELDS}={"DIRS":["Турция","Россия","Абхазия","Египет","ОАЭ","Вьетнам","Таиланд","Беларусь","Мальдивы","Казахстан"],"RUB":[["Спеццены и горящие туры","спеццены"],["Экскурсия месяца","экскурсия месяца"],["Документы и визы","документы и визы"],["Город в картинках","город в картинках"]],"RUBVAL":"[\"спеццены\", \"экскурсия месяца\", \"документы и визы\", \"город в картинках\"]","RULES":["Стикер, голосовое, фото или файл на любом шаге → «Я понимаю только текст и кнопки 🙂» и повтор текущего шага.","Пока онбординг не пройден, любая кнопка постоянного меню возвращает на текущий шаг онбординга.","Шаг, поле которого уже заполнено в карточке (например, у бывшего клиента), пропускаем. Проверяем «поля нет», а не «пустая строка»: пустые параметры не передаём.","Режим «Исправить»: шаг Т2–Т6 открыт из Т7. Тогда задаём только сам вопрос, без вводной фразы, условия пропуска не действуют, после ответа возвращаемся в Т7. Нужна переменная режима: онбординг / исправление.","Подстановки с пользовательским вводом (город, имя) ставим только так, чтобы падеж не ломался: «Города вылета: Воронеж», а не «из Воронеж».","Массивы в тексте выводим через запятую: [\"Турция\", \"ОАЭ\"] → «Турция, ОАЭ»."],"NODES":{"Т0":{"lane":"Онбординг","title":"Вход в бота","svc":true,"when":"Турист нажал Start или отправил /start. Ссылка может прийти с параметром: t.me/<бот>?start=<источник>.","logic":["Ищем карточку по telegramId.","subTG = да и Статус онбординга = пройден → М1 «Меню».","subTG = да, онбординг не пройден → первый незаполненный шаг из Т2–Т6.","Карточки нет или subTG = нет → Т1."],"write":["Турист или агент = «турист»","telegramId","[Ft] Источник подписки = параметр start, без параметра «прямой». Только при первом входе.","[Ft] Статус онбординга = «начат», если поле пустое."]},"Т1":{"lane":"Онбординг","title":"Приветствие и согласие","when":"Новый турист или турист, который ранее отписался. Без согласия дальше не ведём.","text":"Здравствуйте, рад вас видеть! Я бот Интуриста: буду присылать подборки туров, спеццены и полезное для поездок — по направлениям, которые интересны вам.\n\nЧтобы продолжить, нужно ваше согласие с условиями.\n\n📄 Политика обработки персональных данных\n📄 Согласие на получение рекламно-информационных сообщений","buttons":[["Принимаю и продолжаю","Т2","subTG = да; [Ft] Подписки на рубрики = все четыре [\"спеццены\", \"экскурсия месяца\", \"документы и визы\", \"город в картинках\"], если поле пустое. Дальше — первый незаполненный шаг; если всё заполнено (вернулся после отписки) — Т7."]],"input":"Текст вместо кнопки → «Чтобы продолжить, нажмите «Принимаю и продолжаю»» + кнопка и обе ссылки."},"Т2":{"lane":"Онбординг","title":"Имя","when":"После согласия. Пропускаем, если Имя уже есть в карточке.","text":"Отлично, давайте познакомимся. Как к вам обращаться?","input":"Только текстом, кнопок нет. Имя = текст, как ввёл турист. Пустое сообщение → повтор вопроса.","write":["Имя (стандартное поле)"]},"Т3":{"lane":"Онбординг","title":"Город","when":"Пропускаем, если Город туриста уже заполнен.","text":"{{имя}}, в каком городе вы живёте?","input":"Текстом. Формат не проверяем. Пустое сообщение → повтор вопроса.","write":["Город туриста"],"logic":["Если город меняют через «Исправить» — после ответа заново задаём Т4: удобные города вылета могли поменяться."]},"Т4":{"lane":"Онбординг","title":"Города вылета","when":"Пропускаем, если [Ft] Турист — города вылета уже заполнено.","text":"Из каких городов вам удобно вылетать? Буду присылать туры с вылетом оттуда.\n\nМожно выбрать несколько или написать свои через запятую. Если в вашем городе нет аэропорта — напишите ближайшие, откуда вы обычно летаете.\nНапример: Воронеж, Липецк","buttons":[["Москва","остаёмся на Т4","Отмечается ✅, повторное нажатие снимает"],["Санкт-Петербург","остаёмся на Т4","Отмечается ✅, повторное нажатие снимает"],["Готово","Т5","[Ft] Турист — города вылета = отмеченные кнопки + написанное текстом, одним массивом: [\"Москва\", \"Воронеж\"]"]],"input":"Текст принимаем до «Готово»: делим по запятым, обрезаем пробелы, убираем дубли без учёта регистра, добавляем в тот же массив. Механика как у направлений.","logic":["Город проживания на кнопку не подставляем: бот не знает, есть ли из него вылеты. Кнопки — только Москва и Санкт-Петербург, остальное турист пишет сам.","«Готово» без выбора и без текста → «Выберите город или напишите свой»."]},"Т5":{"lane":"Онбординг","title":"Направления","when":"Пропускаем, если направление интереса уже заполнено.","text":"Отметьте направления, которые вам интересны, — буду присылать только про них. Можно выбрать несколько или все.\n\nЕсли нужного направления нет в списке — напишите его текстом, через запятую.\nНапример: Абхазия, Грузия, Сочи","buttons":[["10 кнопок направлений","остаёмся на Т5","Кнопка отмечается ✅, повторное нажатие снимает"],["Интересны все","Т6","[Ft] Турист — направление интереса = [\"все направления\"]"],["Готово","Т6","[Ft] Турист — направление интереса = отмеченные кнопки + написанное текстом, одним массивом"]],"input":"Текст принимаем до «Готово»: делим по запятым, обрезаем пробелы, убираем дубли без учёта регистра, добавляем в тот же массив. Текст сам по себе не закрывает шаг — ждём «Готово».","logic":["Выбор кнопками — та же механика, что у агентов. Отличие: у агентов текст пишется в отдельное поле, у туристов — всё в одно.","«Готово» без выбора и без текста → «Выберите хотя бы одно направление или нажмите «Интересны все»»."]},"Т6":{"lane":"Онбординг","title":"Телефон","when":"Пропускаем, если Телефон уже есть в карточке. Шаг обязательный: кнопки «Пропустить» нет.","text":"И последнее — номер телефона. По нему я закреплю ваши настройки в системе Интуриста. Звонить не буду.\n\nНажмите «Поделиться номером» или напишите его в формате +7 900 123-45-67","buttons":[["📱 Поделиться номером (кнопка под полем ввода)","Т7","Телефон = номер из контакта. Принимаем, только если контакт принадлежит самому отправителю (contact.user_id = id отправителя), иначе считаем ручным вводом. После ответа кнопку убираем."]],"input":"Ручной ввод: убираем пробелы, скобки, дефисы; 8XXXXXXXXXX → +7XXXXXXXXXX; номер без «+» → добавляем «+». Принимаем 10–15 цифр (номера Беларуси, Казахстана и других стран тоже). Иначе → «Не похоже на номер. Напишите в формате +7 900 123-45-67 или нажмите «Поделиться номером»».","write":["Телефон (стандартное поле)"],"logic":["Кто не оставил номер, застревает на этом шаге. subTG = да у него уже есть, рассылки он получает; через 24 ч придёт Н1."]},"Т7":{"lane":"Онбординг","title":"Проверка данных","when":"В конце онбординга; из меню («Мои данные»); после повторной подписки.","text":"Проверим, всё ли верно:\n\nИмя: {{имя}}\nГород: {{город}}\nГорода вылета: {{города вылета}}\nНаправления: {{направления}}\nТелефон: {{телефон}}","buttons":[["Всё верно","Т8 / М1","Из онбординга → Т8. Из меню или после повторной подписки → М1."],["Исправить","Т7а","—"]],"input":"Текст вместо кнопки → повтор сводки с кнопками.","logic":["Сводку собираем одним параметром текста заранее: пустых строк не бывает, потому что к Т7 все поля заполнены."]},"Т7а":{"lane":"Онбординг","title":"Что исправить","text":"Что исправить?","buttons":[["Имя","Т2","режим «исправление»"],["Город","Т3","после него — Т4"],["Города вылета","Т4","—"],["Направления","Т5","прежний выбор уже отмечен ✅"],["Телефон","Т6","—"],["Назад","Т7","—"]],"logic":["После ответа на исправляемый шаг возвращаемся в Т7."]},"Т8":{"lane":"Онбординг","title":"Готово","text":"Готово, {{имя}}! Буду присылать подборки и полезное по вашим направлениям. Изменить данные или рубрики можно в любой момент в меню.\n\nЧтобы подборки были точнее, расскажите, как вы любите отдыхать, — это 3 коротких вопроса.","buttons":[["Рассказать","П1","—"],["В меню","М1","—"]],"write":["[Ft] Статус онбординга = «пройден»"]},"Н1":{"lane":"Онбординг","title":"Напоминание через 24 часа","svc":true,"when":"Через 24 ч после «начат», один раз. Условия проверяем в момент отправки: Статус онбординга = «начат» и subTG ≠ нет.","text":"Вы не закончили настройку. Продолжим? Это займёт минуту.","buttons":[["Продолжить","шаг, где остановился","Т1, если согласия нет; иначе первый незаполненный из Т2–Т6"]],"write":["[Ft] Статус онбординга = «напомнили» (чтобы второй раз не отправлять). После прохождения — «пройден»."]},"М1":{"lane":"Меню","title":"Главное меню","when":"После онбординга и по кнопке «В меню».","text":"Чем помочь?","buttons":[["Подобрать тур","П1","—"],["Мои подписки","Р1","—"],["Мои данные","Т7","режим «из меню»"]],"logic":["Постоянное меню Telegram (☰ у поля ввода): «Подобрать тур», «Мои подписки», «Мои данные», «Отписаться».","Команда /stop из любой точки → сразу О2."]},"П1":{"lane":"Подбор тура","title":"Тип отдыха","when":"Кнопка «Рассказать» в Т8 или «Подобрать тур» в меню.","text":"Какой отдых вам ближе? Так я смогу подбирать туры именно под вас.","buttons":[["Пляж","П2","[Ft] Турист — тип отдыха = «пляж»"],["Экскурсии","П2","[Ft] Турист — тип отдыха = «экскурсии»"],["Горы","П2","[Ft] Турист — тип отдыха = «горы»"],["Санаторий","П2","[Ft] Турист — тип отдыха = «санаторий»"]],"input":"Текст вместо кнопки → повтор вопроса."},"П2":{"lane":"Подбор тура","title":"С кем едете","text":"С кем планируете поехать?","buttons":[["Вдвоём","П3","[Ft] Турист — состав поездки = «вдвоём»"],["С детьми","П3","[Ft] Турист — состав поездки = «с детьми»"],["Компанией","П3","[Ft] Турист — состав поездки = «компанией»"],["Один/одна","П3","[Ft] Турист — состав поездки = «один»"]],"input":"Текст вместо кнопки → повтор вопроса."},"П3":{"lane":"Подбор тура","title":"Когда","text":"Когда хотите поехать?","buttons":[["В ближайшие 1–2 месяца","П4","[Ft] Турист — горизонт поездки = «1–2 месяца»"],["Через 3–6 месяцев","П4","… = «3–6 месяцев»"],["Позже, пока присматриваюсь","П4","… = «позже»"]],"input":"Текст вместо кнопки → повтор вопроса.","logic":["Поле решает, когда слать подборку, а не что."]},"П4":{"lane":"Подбор тура","title":"Итог","text":"Спасибо, {{имя}}! Учту это в подборках. А пока можно посмотреть туры на сайте Интуриста.","buttons":[["Смотреть туры на сайте","сайт Интуриста","Ссылка на сайт Интуриста"],["В меню","М1","—"]],"write":["[Ft] Статус туриста = «выбирает»"]},"Р1":{"lane":"Мои подписки","title":"Выбор рубрик","when":"Кнопка «Мои подписки» или «Настроить рубрики» в О1.","text":"Что присылать? Отметьте нужное — по снятым рубрикам писать не буду.","buttons":[["4 рубрики","остаёмся на Р1","✅ ставится / снимается; включённые уже отмечены"],["Готово","Р2","[Ft] Подписки на рубрики = отмеченные"]],"logic":["Сняты все четыре + «Готово» → О1."]},"Р2":{"lane":"Мои подписки","title":"Рубрики сохранены","text":"Сохранил. Буду присылать: {{рубрики}}. Изменить можно в любой момент в «Мои подписки».","buttons":[["В меню","М1","—"]]},"О1":{"lane":"Отписка","title":"Отключить всё?","when":"«Отписаться» в постоянном меню или сняты все рубрики в Р1.","text":"Отключить все рассылки? Можно оставить только нужные рубрики — например, одни спеццены.","buttons":[["Настроить рубрики","Р1","—"],["Отписаться от всего","О2","—"]]},"О2":{"lane":"Отписка","title":"Рассылки отключены","when":"«Отписаться от всего» или команда /stop.","text":"Готово, рассылки отключены. Если передумаете — отправьте /start.","write":["subTG = нет","Остальные поля и рубрики не трогаем."],"logic":["После /start — снова Т1 (согласие берём заново), затем сразу Т7: данные уже есть, человек их сверяет."]}},"LANES":[["Онбординг","/start",["Т0","Т1","Т2","Т3","Т4","Т5","Т6","Т7","Т8"],"Заполненные в карточке шаги пропускаем. «Исправить» в Т7 → Т7а → нужный шаг → обратно в Т7. Не дошёл до конца → через 24 ч Н1."],["Меню","после онбординга",["М1"],"Подобрать тур → П1. Мои подписки → Р1. Мои данные → Т7."],["Подбор тура","«Рассказать» в Т8 или «Подобрать тур»",["П1","П2","П3","П4"],"П4 → сайт Интуриста или меню."],["Мои подписки","кнопка «Мои подписки»",["Р1","Р2"],"Сняты все рубрики → О1."],["Отписка","☰ «Отписаться» или /stop",["О1","О2"],"/stop → сразу О2. Новый /start → Т1 → Т7."]],"FIELDS":[["Турист или агент","строка","«турист»","Т0","have","Не меняется"],["telegramId","авто","—","Т0","have","—"],["subTG","да / нет","да / нет","Т1, О2","have","Последнее значение"],["Имя","стандартное","Как ввёл турист или имя из профиля Telegram","Т2","have","Если пусто; через «Исправить» — всегда"],["Телефон","стандартное","+79001234567, +375…","Т6","have","Если пусто; через «Исправить» — всегда"],["Город туриста","строка","Как ввёл турист, например «Казань»","Т3","have","Если пусто; через «Исправить» — всегда"],["[Ft] Турист — города вылета","массив строк","Кнопки и текст вместе: [\"Москва\", \"Воронеж\"]","Т4","make","Если пусто; через «Исправить» — всегда"],["[Ft] Турист — направление интереса","массив строк","Кнопки и текст вместе: [\"Турция\", \"ОАЭ\", \"Абхазия\"]; или [\"все направления\"]","Т5","make","Последний ответ"],["[Ft] Статус онбординга","строка","начат / напомнили / пройден","Т0, Н1, Т8","make","Последнее значение"],["[Ft] Источник подписки","строка","Параметр start; без параметра — «прямой»","Т0","make","Только первый вход"],["[Ft] Подписки на рубрики","массив строк","[\"спеццены\", \"экскурсия месяца\", \"документы и визы\", \"город в картинках\"] — подмножество","Т1 (все, если пусто), Р1","make","Последний выбор"],["[Ft] Турист — тип отдыха","строка","пляж / экскурсии / горы / санаторий","П1","make","Последний ответ"],["[Ft] Турист — состав поездки","строка","вдвоём / с детьми / компанией / один","П2","make","Последний ответ"],["[Ft] Турист — горизонт поездки","строка","1–2 месяца / 3–6 месяцев / позже","П3","make","Последний ответ"],["[Ft] Статус туриста","строка","выбирает","П4","make","Последний ответ"]]};
+const F={type:'Турист или агент',tg:'telegramId',src:'[Ft] Источник подписки',sub:'subTG',onb:'[Ft] Статус онбординга',name:'Имя',city:'Город туриста',fly:'[Ft] Турист — города вылета',dir:'[Ft] Турист — направление интереса',phone:'Телефон',rub:'[Ft] Подписки на рубрики',rest:'[Ft] Турист — тип отдыха',who:'[Ft] Турист — состав поездки',when:'[Ft] Турист — горизонт поездки',status:'[Ft] Статус туриста'};
+
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let S,cur,sel,typed,selF,typedF,edit,liveKb;const FLY=['Москва','Санкт-Петербург'];
+const idRe=/^[ТПРОМН]\d[а]?$/;
+
+/* ---------- Spec ---------- */
+function gotoBtn(to){return idRe.test(to)?`<button class="goto" data-spec="${to}">${to}</button>`:esc(to)}
+function specHTML(id){
+  const n=NODES[id];let h=`<div class="eyebrow">${esc(n.lane)}${n.svc?' · служебный шаг':''}</div><h2><span class="node-id">${id}</span>${esc(n.title)}</h2>`;
+  const row=(k,v)=>`<div class="spec-row"><div class="k">${k}</div><div>${v}</div></div>`;
+  if(n.when)h+=row('Когда',esc(n.when));
+  if(n.text)h+=row('Текст',`<div class="bottext">${esc(n.text)}</div>`);
+  if(n.buttons)h+=row('Кнопки',`<div class="tbl-wrap"><table><tr><th>Кнопка</th><th>Куда</th><th>Что пишем</th></tr>${n.buttons.map(b=>`<tr><td>${esc(b[0])}</td><td>${b[1].split(' / ').map(gotoBtn).join(' / ')}</td><td class="mono">${esc(b[2])}</td></tr>`).join('')}</table></div>`);
+  if(n.input)h+=row('Ввод текстом',esc(n.input));
+  if(n.logic)h+=row('Логика',`<ul>${n.logic.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`);
+  if(n.write)h+=row('Пишем в Mindbox',`<ul class="mono">${n.write.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`);
+  return h;
+}
+function showSpec(id){$('#spec').innerHTML=specHTML(id)}
+document.addEventListener('click',e=>{const g=e.target.closest('[data-spec]');if(!g)return;if(!$('#view-map').hidden)selectMap(g.dataset.spec);else showSpec(g.dataset.spec)});
+
+/* ---------- Card ---------- */
+const fmt=v=>Array.isArray(v)?'['+v.map(x=>'"'+x+'"').join(', ')+']':v;
+const list=v=>Array.isArray(v)?v.join(', '):v;
+function renderCard(ch=[]){
+  $('#card').innerHTML=Object.entries(F).map(([k,n])=>{const v=S[k];const e=v===undefined||(Array.isArray(v)&&!v.length);
+    return `<div class="field${ch.includes(k)?' flash':''}"><div class="n">${esc(n)}</div><div class="v${e?' empty':''}">${e?'не передаём':esc(fmt(v))}</div></div>`}).join('');
+  if(ch.length)setTimeout(()=>document.querySelectorAll('.field.flash').forEach(x=>x.classList.remove('flash')),1300);
+}
+function write(o){Object.assign(S,o);renderCard(Object.keys(o))}
+
+/* ---------- Chat ---------- */
+function add(cls,html){const d=document.createElement('div');d.className='msg '+cls;d.innerHTML=html;$('#chat').appendChild(d);$('#chat').scrollTop=1e6;return d}
+const me=t=>add('me',esc(t)), sys=t=>add('sys',esc(t));
+function lockKb(){if(liveKb){liveKb.querySelectorAll('button').forEach(b=>b.disabled=true);liveKb=null}}
+function kb(items,on){lockKb();const k=document.createElement('div');k.className='kb';
+  items.forEach(([label,full,val,act])=>{const b=document.createElement('button');b.textContent=(act?'✅ ':'')+label;if(full)b.classList.add('full');if(act)b.classList.add('on');b.onclick=()=>on(val??label);k.appendChild(b)});
+  $('#chat').appendChild(k);$('#chat').scrollTop=1e6;liveKb=k}
+function redraw(items,on){if(liveKb){liveKb.remove();liveKb=null}kb(items,on)}
+function fill(t){return t.replace(/\{\{имя\}\}/g,S.name||'').replace(/\{\{город\}\}/g,S.city||'').replace(/\{\{города вылета\}\}/g,list(S.fly||[])).replace(/\{\{направления\}\}/g,list(S.dir||[])).replace(/\{\{телефон\}\}/g,S.phone||'')}
+function bot(id,text){const t=esc(fill(text??NODES[id].text)).replace(/📄 ([^\n]+)/g,'📄 <a href="#" onclick="return false">$1</a>');
+  add('bot',`<span class="tag" data-spec="${id}">${id} · ${esc(NODES[id].title)}</span><br>${t}`)}
+const ph=t=>{$('#textIn').placeholder=t||'Сообщение'};
+
+function nextOnb(){ if(S.sub!=='да')return go('Т1'); if(!S.name)return go('Т2'); if(!S.city)return go('Т3'); if(!S.fly||!S.fly.length)return go('Т4'); if(!S.dir||!S.dir.length)return go('Т5'); if(!S.phone)return go('Т6'); return go('Т7') }
+const after=(fromCity)=>{ if(edit){ if(fromCity)return go('Т4'); edit=false; return go('Т7') } return nextOnb() };
+const onbDone=()=>S.onb==='пройден';
+
+function go(id){
+  cur=id;showSpec(id);$('#menuPop').hidden=true;$('#menuBtn').disabled=S.sub!=='да';ph();
+  switch(id){
+  case 'Т0':{sys('Турист нажал START');const c={type:'турист',tg:'123456789'};if(S.src===undefined)c.src='прямой';if(S.onb===undefined)c.onb='начат';write(c);
+    if(S.sub==='да'&&onbDone()){sys('Т0: подписан, онбординг пройден → меню');return go('М1')}
+    if(S.sub==='да'){sys('Т0: онбординг не закончен → первый незаполненный шаг');return nextOnb()}
+    sys('Т0: согласия нет → Т1');return go('Т1')}
+  case 'Т1':bot('Т1');kb([['Принимаю и продолжаю',1]],v=>{me(v);const c={sub:'да'};if(!S.rub||!S.rub.length)c.rub=RUB.map(r=>r[1]);write(c);$('#menuBtn').disabled=false;
+      if(onbDone()){sys('Все поля уже есть → сверка данных');return go('Т7')}nextOnb()});ph('Текст вместо кнопки — бот попросит нажать кнопку');break;
+  case 'Т2':lockKb();bot('Т2',edit?'Как к вам обращаться?':undefined);ph('Напишите имя');break;
+  case 'Т3':bot('Т3',edit?'В каком городе вы живёте?':undefined);lockKb();ph('Напишите город, например Казань');break;
+  case 'Т4':selF=new Set((S.fly||[]).filter(c=>FLY.includes(c)));typedF=edit?(S.fly||[]).filter(c=>!FLY.includes(c)):[];bot('Т4',edit?'Из каких городов вам удобно вылетать? Можно выбрать несколько или написать свои через запятую.':undefined);drawFly();ph('Свои города, через запятую');break;
+  case 'Т5':sel=new Set((S.dir||[]).filter(d=>DIRS.includes(d)));typed=edit?(S.dir||[]).filter(d=>!DIRS.includes(d)&&d!=='все направления'):[];bot('Т5');drawDir();ph('Своё направление, через запятую');break;
+  case 'Т6':bot('Т6',edit?'Напишите номер телефона в формате +7 900 123-45-67 или нажмите «Поделиться номером».':undefined);kb([['📱 Поделиться номером',1]],()=>{lockKb();me('📱 Контакт: +7 900 123-45-67');write({phone:'+79001234567'});sys('Контакт свой (user_id совпадает) → принят, кнопка убрана');after()});ph('+7 900 123-45-67');break;
+  case 'Т7':bot('Т7');kb([['Всё верно',0],['Исправить',0]],v=>{me(v);if(v==='Исправить')return go('Т7а');edit=false;onbDone()?go('М1'):go('Т8')});break;
+  case 'Т7а':bot('Т7а');kb([['Имя',0,'Т2'],['Город',0,'Т3'],['Города вылета',0,'Т4'],['Направления',0,'Т5'],['Телефон',0,'Т6'],['Назад',0,'Т7']],v=>{me(v==='Т7'?'Назад':NODES[v].title);edit=v!=='Т7';go(v)});break;
+  case 'Т8':bot('Т8');write({onb:'пройден'});kb([['Рассказать',0],['В меню',0]],v=>{me(v);go(v==='Рассказать'?'П1':'М1')});break;
+  case 'Н1':bot('Н1');write({onb:'напомнили'});kb([['Продолжить',1]],v=>{me(v);nextOnb()});break;
+  case 'М1':bot('М1');kb([['Подобрать тур',1],['Мои подписки',0],['Мои данные',0]],v=>{me(v);go({'Подобрать тур':'П1','Мои подписки':'Р1','Мои данные':'Т7'}[v])});break;
+  case 'П1':case 'П2':case 'П3':{bot(id);const key={П1:'rest',П2:'who',П3:'when'}[id],nx={П1:'П2',П2:'П3',П3:'П4'}[id];
+    const map={'В ближайшие 1–2 месяца':'1–2 месяца','Через 3–6 месяцев':'3–6 месяцев','Позже, пока присматриваюсь':'позже','Один/одна':'один'};
+    kb(NODES[id].buttons.map(b=>[b[0],id==='П3']),v=>{me(v);write({[key]:map[v]||v.toLowerCase()});go(nx)});break}
+  case 'П4':bot('П4');write({status:'выбирает'});kb([['Смотреть туры на сайте',1],['В меню',1]],v=>{if(v==='В меню'){me(v);go('М1')}else toast('Здесь откроется сайт Интуриста')});break;
+  case 'Р1':sel=new Set(S.rub||[]);bot('Р1');drawRub();break;
+  case 'Р2':bot('Р2','Сохранил. Буду присылать: '+RUB.filter(r=>(S.rub||[]).includes(r[1])).map(r=>r[0]).join(', ')+'. Изменить можно в любой момент в «Мои подписки».');kb([['В меню',1]],v=>{me(v);go('М1')});break;
+  case 'О1':bot('О1');kb([['Настроить рубрики',1],['Отписаться от всего',1]],v=>{me(v);go(v==='Настроить рубрики'?'Р1':'О2')});break;
+  case 'О2':lockKb();bot('О2');write({sub:'нет'});$('#menuBtn').disabled=true;ph('Отправьте /start, чтобы вернуться');break;
+  }
+}
+function drawDir(){redraw(DIRS.map(d=>[d,0,d,sel.has(d)]).concat([['Интересны все',1,'__all'],['Готово',1,'__done']]),v=>{
+  if(v==='__all'){lockKb();me('Интересны все');write({dir:['все направления']});return after()}
+  if(v==='__done'){const seen=new Set(),arr=[...sel,...typed].filter(x=>{const k=x.toLowerCase();if(seen.has(k))return false;seen.add(k);return true});
+    if(!arr.length){add('bot','Выберите хотя бы одно направление или нажмите «Интересны все»');return drawDir()}
+    lockKb();me('Готово');write({dir:arr});return after()}
+  sel.has(v)?sel.delete(v):sel.add(v);drawDir()})}
+function drawFly(){redraw(FLY.map(c=>[c,0,c,selF.has(c)]).concat([['Готово',1,'__done']]),v=>{
+  if(v==='__done'){const seen=new Set(),arr=[...selF,...typedF].filter(x=>{const k=x.toLowerCase();if(seen.has(k))return false;seen.add(k);return true});
+    if(!arr.length){add('bot','Выберите город или напишите свой');return drawFly()}
+    lockKb();me('Готово');write({fly:arr});return after()}
+  selF.has(v)?selF.delete(v):selF.add(v);drawFly()})}
+function drawRub(){redraw(RUB.map(r=>[r[0],1,r[1],sel.has(r[1])]).concat([['Готово',1,'__done']]),v=>{
+  if(v==='__done'){lockKb();me('Готово');if(!sel.size)return go('О1');write({rub:RUB.map(r=>r[1]).filter(x=>sel.has(x))});return go('Р2')}
+  sel.has(v)?sel.delete(v):sel.add(v);drawRub()})}
+function normPhone(t){let d=t.replace(/[\s()\-]/g,'');if(/^8\d{10}$/.test(d))d='+7'+d.slice(1);if(/^\d+$/.test(d))d='+'+d;return /^\+\d{10,15}$/.test(d)?d:null}
+
+function sendText(){const t=$('#textIn').value.trim();if(!t)return;$('#textIn').value='';me(t);
+  if(t==='/stop'){lockKb();return S.sub==='да'?go('О2'):sys('Уже отписан')}
+  if(t==='/start'){lockKb();edit=false;return go('Т0')}
+  switch(cur){
+  case 'Т1':return bot('Т1','Чтобы продолжить, нажмите «Принимаю и продолжаю»\n\n📄 Политика обработки персональных данных\n📄 Согласие на получение рекламно-информационных сообщений');
+  case 'Т2':write({name:t});return after();
+  case 'Т3':write({city:t});return after(true);
+  case 'Т4':t.split(',').map(x=>x.trim()).filter(Boolean).forEach(x=>typedF.push(x));sys('Добавлено в массив: '+typedF.join(', ')+' · ждём «Готово»');return drawFly();
+  case 'Т5':t.split(',').map(x=>x.trim()).filter(Boolean).forEach(x=>typed.push(x));sys('Добавлено в массив: '+typed.join(', ')+' · ждём «Готово»');return drawDir();
+  case 'Т6':{const p=normPhone(t);if(!p){add('bot','Не похоже на номер. Напишите в формате +7 900 123-45-67 или нажмите «Поделиться номером»');return}lockKb();write({phone:p});return after()}
+  case 'О2':return sys('Бот ждёт /start');
+  default: if(NODES[cur]&&NODES[cur].buttons)return go(cur); sys('Бот ждёт нажатия кнопки');
+  }
+}
+$('#sendBtn').addEventListener('click',sendText);
+$('#textIn').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.isComposing){e.preventDefault();sendText()}});
+$('#menuBtn').onclick=()=>{$('#menuPop').hidden=!$('#menuPop').hidden};
+$('#menuPop').addEventListener('click',e=>{const b=e.target.closest('[data-cmd]');if(!b)return;$('#menuPop').hidden=true;me(b.textContent);lockKb();
+  if(!onbDone()){sys('Онбординг не пройден → возвращаем на текущий шаг');return go(cur)}
+  edit=false;go(b.dataset.cmd)});
+$('#dayBtn').onclick=()=>{
+  if(!S.onb||S.onb!=='начат'||S.sub==='нет'){toast(S.onb==='напомнили'?'Напоминание уже отправлялось — второй раз не шлём':'Н1 не отправится: онбординг '+(S.onb?S.onb:'не начат'));return}
+  lockKb();sys('Прошли сутки');go('Н1')};
+
+function restart(prefill){
+  S={};edit=false;if($('#oldClient').checked)Object.assign(S,{name:'Анна',city:'Казань',phone:'+79001234567'});
+  if(prefill)Object.assign(S,prefill);
+  $('#chat').innerHTML='';liveKb=null;renderCard();cur=null;$('#menuBtn').disabled=true;
+  if(prefill){sys('Карточка заполнена для примера');return}
+  showSpec('Т0');kb([['START',1]],()=>{me('/start');go('Т0')});ph('Или отправьте /start');
+}
+$('#restart').onclick=()=>restart();$('#oldClient').onchange=()=>restart();
+
+/* ---------- Map ---------- */
+let mapSel='Т0';
+function drawMap(){$('#lanes').innerHTML=LANES.map(([name,entry,ids,note])=>`<div class="lane"><div class="lane-name">${esc(name)}<small>вход: ${esc(entry)}</small></div><div><div class="flow">${ids.map((id,i)=>`${i?'<span class="arrow" aria-hidden="true">→</span>':''}<button class="chip${NODES[id].svc?' svc':''}${id===mapSel?' sel':''}" data-map="${id}"><b>${id}</b><span>${esc(NODES[id].title)}</span></button>`).join('')}</div><div class="branch">${esc(note)}</div></div></div>`).join('')
+  +`<div class="lane"><div class="lane-name">Вспомогательные<small>вызываются из шагов</small></div><div><div class="flow">${['Т7а','Н1'].map(id=>`<button class="chip${NODES[id].svc?' svc':''}${id===mapSel?' sel':''}" data-map="${id}"><b>${id}</b><span>${esc(NODES[id].title)}</span></button>`).join('')}</div></div></div>`}
+function selectMap(id){mapSel=id;drawMap();$('#mapDetail').innerHTML=specHTML(id)+`<div class="spec-row"><div class="k"></div><div><button class="btn" data-try="${id}">Открыть этот шаг в прототипе</button></div></div>`}
+$('#lanes').addEventListener('click',e=>{const c=e.target.closest('[data-map]');if(c)selectMap(c.dataset.map)});
+$('#mapDetail').addEventListener('click',e=>{const b=e.target.closest('[data-try]');if(!b)return;const id=b.dataset.try;tab('proto');
+  if(id==='Т0'||id==='Т1'){restart();if(id==='Т1'){me('/start');go('Т0')}return}
+  const full={type:'турист',tg:'123456789',src:'прямой',sub:'да',onb:'пройден',name:'Анна',city:'Казань',fly:['Москва'],dir:['Турция','ОАЭ'],phone:'+79001234567',rub:RUB.map(r=>r[1])};
+  if(['Т2','Т3','Т4','Т5','Т6','Т8','Н1'].includes(id)){full.onb='начат';({Т2:['name','city','fly','dir','phone'],Т3:['city','fly','dir','phone'],Т4:['fly','dir','phone'],Т5:['dir','phone'],Т6:['phone'],Т8:[],Н1:[]})[id].forEach(k=>delete full[k])}
+  restart(full);go(id)});
+$('#rules').innerHTML='<div class="eyebrow">Правила для всех шагов</div><ul style="margin:10px 0 0;padding-left:18px">'+RULES.map(r=>`<li style="margin-top:6px">${esc(r)}</li>`).join('')+'</ul>';
+
+/* ---------- Fields ---------- */
+$('#fieldsTbl').innerHTML='<tr><th>Поле</th><th>Тип</th><th>Значения</th><th>Где пишется</th><th>Статус</th><th>Перезапись</th></tr>'+FIELDS.map(f=>`<tr><td class="mono">${esc(f[0])}</td><td>${esc(f[1])}</td><td class="mono">${esc(f[2])}</td><td>${f[3].split(/,\s*/).map(x=>{const m=x.match(/^([ТПРОМН]\d[а]?)(.*)$/);return m?gotoBtn(m[1])+esc(m[2]):esc(x)}).join(' ')}</td><td><span class="status ${f[4]}">${f[4]==='have'?'Есть':'Создать'}</span></td><td>${esc(f[5])}</td></tr>`).join('');
+$('#fieldsTbl').addEventListener('click',e=>{const g=e.target.closest('[data-spec]');if(g){e.stopPropagation();tab('map');selectMap(g.dataset.spec)}},true);
+
+/* ---------- Tabs ---------- */
+function tab(t){document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===t));['proto','map','fields'].forEach(x=>$('#view-'+x).hidden=x!==t);try{history.replaceState(null,'','#'+t)}catch(_){}}
+document.querySelector('.tabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(b)tab(b.dataset.tab)});
+function toast(t){const el=$('#toast');el.textContent=t;el.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>el.hidden=true,2400)}
+
+drawMap();selectMap('Т0');restart();
+const h=(location.hash||'').slice(1);if(['map','fields','proto'].includes(h))tab(h);
+
+</script>
+</body></html>
